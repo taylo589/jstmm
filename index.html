@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Luke's Test Page</title>
+<meta charset="UTF-8">
+<style>
+body {background-color: powderblue;}
+h1   {color: blue;}
+p    {color: red;}
+</style>
+<script>
+  var material = {};
+  material["silica"] = [1.45,0];
+  material["air"] = [1,0];
+  material["silicon"] = [3.57,1e-3];
+</script>
+</head>
+<body>
+  <p>hello</p>
+  <br>
+  Wavelength (microns):<br>
+  <input id="wavelength" type="text" name="wavelength" value="1"><br>
+  Angle (degrees):<br>
+  <input id="angle" type="text" name="angle" value="0"><br>
+  <br>
+  <button type="button" onclick="addLayer()">Add Layer</button>
+  <button type="button" onclick="calculateTMM()">calculate</button>
+  <br>
+  <table id="tmmtable">
+    <tr>
+      <td></td>
+      <td>Material</td>
+      <td>Custom n,k</td>
+      <td>
+        Thickness
+        <select id=selectthick>
+          <option value="PT">microns</option>
+          <option value="OT">riu-microns</option>
+          <option value="WT">waves</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td>superstrate</td>
+      <td>
+        <select id="select0">
+          <option value="air">Air</option>
+          <option value="silica">SiO2</option>
+          <option value="silicon">Si</option>
+          <option value="custom">Custom</option>
+        </select>
+      </td>
+      <td>  
+        <input type="text" name="customnk" value="">
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>substrate</td>
+      <td>
+        <select id="selectS">
+          <option value="air">Air</option>
+          <option value="silica">SiO2</option>
+          <option value="silicon">Si</option>
+          <option value="custom">Custom</option>
+        </select>
+      </td>
+      <td>
+        <input type="text" name="customnk" value="">
+      </td>
+      <td></td>
+    </tr>
+  </table>
+  <br>
+  <p>R</p>
+  <p id="resultR">0</p>
+  <p>T</p>
+  <p id="resultT">0</p>
+  <p>R+T</p>
+  <p id="resultRpT">0</p>
+
+
+<script type='text/javascript'>
+  function addLayer(){
+    var table = document.getElementById("tmmtable");
+    var nrow = table.rows.length;
+    var row = table.insertRow(2);
+    var cell0 = row.insertCell(0);
+    var cell1 = row.insertCell(1);
+    var cell2 = row.insertCell(2);
+    var cell3 = row.insertCell(3);
+    cell0.innerHTML = "layer " + (nrow-2);
+    cell1.innerHTML = `
+        <select>
+          <option value="air">Air</option>
+          <option value="silica">SiO2</option>
+          <option value="silicon">Si</option>
+          <option value="custom">Custom</option>
+          </select>
+          `;
+    cell2.innerHTML = `
+        <input type="text" name="customnk" value="">
+        `;
+    cell3.innerHTML = `
+      <input type="text" name="thickness" value="0"><br>
+      `;
+  }
+
+  // complex add
+  function cAdd(a,b){
+    var c = new Array(2);
+    c[0] = a[0] + b[0];
+    c[1] = a[1] + b[1];
+    return c;
+  }
+
+  // complex subtract 
+  function cSub(a,b){
+    var c = new Array(2);
+    c[0] = a[0] - b[0];
+    c[1] = a[1] - b[1];
+    return c;
+  }
+
+  // complex negate 
+  function cNeg(a){
+    var c = new Array(2);
+    c[0] = -a[0];
+    c[1] = -a[1];
+    return c;
+  }
+
+  // complex multiply
+  function cMult(a,b){
+    var c = new Array(2);
+    c[0] = a[0]*b[0] - a[1]*b[1];
+    c[1] = a[0]*b[1] + a[1]*b[0];
+    return c;
+  }
+
+  // scalar-complex multiply
+  function sMult(a,b){
+    var c = new Array(2);
+    c[0] = a*b[0];
+    c[1] = a*b[1];
+    return c;
+  }
+
+  // complex divide 
+  function cDiv(a,b){
+    var c = new Array(2);
+    var p = b[0]*b[0] + b[1]*b[1]; 
+    c[0] = (a[0]*b[0] + a[1]*b[1])/p;
+    c[1] = (-a[0]*b[1] + a[1]*b[0])/p;
+    return c;
+  }
+
+  function cArcsin(a){
+    var c = new Array(2);
+    var A = (Math.sqrt(Math.pow(1+a[0],2)+a[1]*a[1])-Math.sqrt(Math.pow(1-a[0],2)+a[1]*a[1]))/2;
+    var B = (Math.sqrt(Math.pow(1+a[0],2)+a[1]*a[1])+Math.sqrt(Math.pow(1-a[0],2)+a[1]*a[1]))/2;
+    c[0] = Math.asin(A);
+    c[1] = Math.log(B+Math.sqrt(B*B-1));
+    return c;
+  }
+
+  // complex exponential function
+  // produces Exp(i*a), NOT Exp(a)
+  function cCis(a){
+    var c = new Array(2);
+    c[0] = Math.cos(a[0])*Math.exp(a[1]);
+    c[1] = Math.sin(a[0])*Math.exp(a[1]);
+    return c;
+  }
+
+  function cCos(a){
+    return sMult(.5,cAdd(cCis(a),cCis(cNeg(a))));
+  }
+
+  function cSin(a){
+    return cMult([0,-.5],cSub(cCis(a),cCis(cNeg(a))));
+  }
+
+  function cAbs2(a){
+    return a[0]*a[0]+a[1]*a[1];
+  }
+
+  function cAbs(a){
+    return Math.sqrt(cAbs2(a));
+  }
+
+  function cAngle(a){
+    return Math.atan2(a[1],a[0]);
+  }
+
+  function mMult(A,B){
+     var C = new Array(4);
+     C[0] = cAdd(cMult(A[0],B[0]),cMult(A[1],B[2]));
+     C[1] = cAdd(cMult(A[0],B[1]),cMult(A[1],B[3]));
+     C[2] = cAdd(cMult(A[2],B[0]),cMult(A[3],B[2]));
+     C[3] = cAdd(cMult(A[2],B[1]),cMult(A[3],B[3]));
+     return C;
+  }
+
+  function mInv(A){
+    var iA = new Array(4);
+    var p = cSub(cMult(A[0],A[3]),cMult(A[1],A[2]));
+    iA[0] = cDiv(A[3],p);
+    iA[1] = cDiv(cNeg(A[1]),p);
+    iA[2] = cDiv(cNeg(A[2]),p);
+    iA[3] = cDiv(A[0],p);
+    return iA;
+  }
+
+  function calculateTMM(){
+    var lam = document.getElementById("wavelength").value;
+    var a0 = [document.getElementById("angle").value,0];
+    var thicktype = document.getElementById("selectthick").value;
+    var table = document.getElementById("tmmtable");
+    var matl = "";
+    var n = 0;
+    var d = 0;
+    var nd = [];
+    for(var i = 1, row; row = table.rows[i]; i++){
+      matl = row.cells[1].getElementsByTagName("select")[0].value;
+      if(matl == "custom"){
+        try{
+          n = row.cells[2].getElementsByTagName("input")[0].value.split(",").map(Number);
+        }
+        catch(err){
+          now.cells[2].getElementsByTagName("input")[0].value = "1,0";
+          n = [1,0];
+        }
+      }
+      else{
+        n = material[matl];
+      }
+      try{
+        d = Number(row.cells[3].getElementsByTagName("input")[0].value);
+      }
+      catch(err){
+        d = 0;
+      }
+      switch(thicktype){
+        case "PT":
+        // physical thickness (microns)
+          break;
+
+        case "OT":
+        // optical thickness (it was specified as n*d riu-microns)
+        // have to divide out the real part of n for the rest of the code to work
+          d = d/n[0];
+          break;
+
+        case "WT":
+          // wavelength thickness (specified in fraction of wavelength)
+          // have to multiply by lambda and 
+          // divide out the real part of n for the rest of the code to work
+          d = d*lam/n[0];
+          break;
+
+      }
+      nd.push([n,d]);
+
+        }
+    console.log("nd");
+    console.log(nd);
+    //  var table = document.getElementById("layertable");
+    var n0 = nd[0][0];
+    var nS = nd[nd.length-1][0];
+    var sin0 = cSin(a0);
+    var aS = cArcsin(cMult(cDiv(n0,nS),sin0));
+    var D0 = [[1,0], [1,0], cMult(cCos(a0),n0),cMult(cNeg(cCos(a0)),n0)]; 
+    var DS = [[1,0], [1,0], cMult(cCos(aS),nS),cMult(cNeg(cCos(aS)),nS)]; 
+    var r = [0,0];
+    var t = [0,0];
+    var R = 0;
+    var T = 0;
+
+    // prep the loop variables
+    var n = 0;
+    var d = 0;
+    var a = [0,0];
+    var ph = 0;
+
+
+    // initial matrix (superstrate invD)
+    var M = mInv(D0); // initial matrix
+    
+    //  for (var row in table.rows){
+    for (var i = 1; i < (nd.length-1); i++){
+      n = nd[i][0];
+      d = nd[i][1];
+//      console.log("n");
+//      console.log(n);
+  //    d = row.getElementsByName("thickness");
+  //    n = row.getElementsByName("refractive index");
+      a = cArcsin(cMult(cDiv(n0,n),sin0));
+//      console.log("a");
+//      console.log(a);
+      ph = cMult(sMult(2*Math.PI*(d/lam),cCos(a)),n);
+//      console.log("ph");
+//      console.log(ph);
+      D = [[1,0], [1,0], cMult(cCos(a),n),cMult(cNeg(cCos(a)),n)];
+//      console.log("D");
+//      console.log(D);
+      P = [cCis(ph),[0,0],[0,0],cCis(cNeg(ph))];
+//      console.log("P");
+//      console.log(P);
+//      console.log("invD");
+//      console.log(mInv(D));
+//      console.log("invDM");
+//      console.log(mMult(mInv(D),M));
+//      console.log("PinvDM");
+//      console.log(mMult(P,mMult(mInv(D),M)));
+      // top-centric multiplication (starting with surface layer)
+      M = mMult(M,mMult(D,mMult(P,mInv(D))));
+//      M = mMult(D,mMult(P,mMult(mInv(D),M)));
+//      console.log("M");
+//      console.log(M);
+      }
+
+    // final multiplication
+    M = mMult(M,DS);
+
+//    console.log("M[0]");
+//    console.log(M[0]);
+    r = cNeg(cDiv(M[2],M[0]));
+    R = cAbs2(r);
+//    console.log("r");
+//    console.log(r);
+//    console.log("R");
+//    console.log(R);
+    t = cDiv([1,0],M[0]);
+    T = sMult(cAbs2(t),cDiv(cMult(cCos(a),nS),cMult(cCos(a0),n0)));
+//    console.log("n0cos(a0)");
+//    console.log(cMult(cCos(a0),n0));
+//    console.log("t");
+//    console.log(t);
+//    console.log("T");
+//    console.log(T);
+    document.getElementById("resultR").innerHTML = R;
+    document.getElementById("resultT").innerHTML = T;
+    document.getElementById("resultRpT").innerHTML = R+T[0];
+  //  document.getElementById("reflectivity").value = -M[2]/M[1];
+  //  document.getElementById("transmissivity").value = 1/M[3];
+  //  document.getElementById("absorption").value = "0";
+  
+  
+  
+  }
+</script>
+</body>
+</html>

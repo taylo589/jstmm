@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Luke's Test Page</title>
+<meta charset="UTF-8">
+<style>
+body {background-color: powderblue;}
+h1   {color: blue;}
+p    {color: red;}
+</style>
+</head>
+<body>
+<table id="layertable">
+<tr>
+  <td></td>
+  <td>thickness (microns)</td>
+  <td>refractive index (riu)</td>
+</tr>
+<tr id="superstrate">
+  <td>superstrate</td>
+  <td><input type="text" name="thickness" value="0"/></td>
+  <td><input type="text" name="refractive index" value="1"/></td>
+</tr>
+<tr>
+  <td> layer 1</td>
+  <td><input type="text" name="thickness"/></td>
+  <td><input type="text" name="refractive index"/></td>
+</tr>
+<tr>
+  <td> layer 2</td>
+  <td><input type="text" name="thickness"/></td>
+  <td><input type="text" name="refractive index"/></td>
+</tr>
+<tr>
+  <td> layer 3</td>
+  <td><input type="text" name="thickness"/></td>
+  <td><input type="text" name="refractive index"/></td>
+</tr>
+<tr id="substrate">
+  <td>substrate</td>
+  <td><input type="text" name="thickness" value="0"/></td>
+  <td><input type="text" name="refractive index" value="3.42"/></td>
+</tr>
+
+</table>
+<input type='submit' id='submit' value='Calculate' onclick="calculateTMM();"/>
+<button onclick="calculateTMM()">Calculate2</button>
+<br>
+<h3>Reflectivity: </h3>
+<input type="text" id="reflectivity"/>
+<h3>Transmissivity: </h3>
+<input type="text" id="transmissivity"/>
+<h3>Absorption: </h3>
+<input type="text" id="absorption"/>
+
+
+<script type='text/javascript'>
+function mMult(A,B){
+   var C = new Array(4);
+   C[0] = A[0]*B[0] + A[1]*B[2];
+   C[1] = A[0]*B[1] + A[1]*B[3];
+   C[2] = A[2]*B[0] + A[3]*B[2];
+   C[3] = A[2]*B[1] + A[3]*B[3];
+   return C;
+}
+
+function mInv(A){
+  var iA = new Array(4);
+  var p = A[0]*A[3] - A[1]*A[2];
+  iA[0] = A[3]/p;
+  iA[1] = -A[1]/p;
+  iA[2] = -A[2]/p;
+  iA[3] = A[0]/p;
+  return iA;
+}
+
+function calculateTMM(){
+  var table = document.getElementById("layertable");
+  var lam = 1;
+  var a0 = 0;
+  var d = 0;
+  var n0 = 1;
+  var n = 1;
+  var a = 0;
+  var ph = 0;
+  var M = [1,0,0,1]; // initial matrix
+  for (var row in table.rows){
+    d = row.getElementsByName("thickness");
+    n = row.getElementsByName("refractive index");
+    a = Math.asin(n0*Math.sin(a0)/n);
+    ph = 2*Math.pi*n*Math.cos(a)*d/lam;
+    D = [1, 1, n*Math.cos(a),-n*Math.cos(a)];
+    P = [Math.cos(ph),0,0,Math.cos(-ph)];
+    M = mMult(mInv(D),mMult(P,mMult(D,M)));
+  }
+  document.getElementById("reflectivity").value = -M[2]/M[1];
+  document.getElementById("transmissivity").value = 1/M[3];
+  document.getElementById("absorption").value = "0";
+
+
+
+}
+</script>
+</body>
+</html>
